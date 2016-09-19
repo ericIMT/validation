@@ -13,6 +13,7 @@ describe('end to end', () => {
     component.bootstrap(configure);
 
     let firstName: HTMLInputElement, lastName: HTMLInputElement,
+        subprop: HTMLInputElement,
         number1: HTMLInputElement, number2: HTMLInputElement,
         password: HTMLInputElement, confirmPassword: HTMLInputElement;
 
@@ -27,6 +28,7 @@ describe('end to end', () => {
         viewModel.controller.addRenderer(renderer);        
         firstName = <HTMLInputElement>component.element.querySelector('#firstName');
         lastName = <HTMLInputElement>component.element.querySelector('#lastName');
+        subprop = <HTMLInputElement>component.element.querySelector('#subProp');
         number1 = <HTMLInputElement>component.element.querySelector('#number1');
         number2 = <HTMLInputElement>component.element.querySelector('#number2');
         password = <HTMLInputElement>component.element.querySelector('#password');
@@ -52,6 +54,15 @@ describe('end to end', () => {
         const renderInstruction = calls.argsFor(calls.count() - 1)[0];
         expect(renderInstruction.render[0].elements[0]).toBe(lastName);
       })
+
+      // blur the subprop- this should trigger validation.
+      .then(() => blur(subprop))
+      // confirm there's an error.
+      .then(() => expect(viewModel.controller.errors.length).toBe(2))
+      //set to a valid value, should reset error
+      .then(() => viewModel.settings.subprop = 'test')
+      .then(() => expect(viewModel.controller.errors.length).toBe(1))
+
       // blur the number1 field- this should trigger validation.
       .then(() => blur(number1))
       // confirm there's an error.

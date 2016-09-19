@@ -7,7 +7,7 @@ import { ValidationMessageProvider } from './validation-messages';
  * Responsible for validating objects and properties.
  */
 export declare class StandardValidator extends Validator {
-    static inject: (typeof ValidationMessageProvider | typeof ViewResources)[];
+    static inject: (typeof ViewResources | typeof ValidationMessageProvider)[];
     private messageProvider;
     private lookupFunctions;
     private getDisplayName;

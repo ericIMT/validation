@@ -33,12 +33,24 @@ export function getPropertyInfo(expression: Expression, source: any) {
 
   let object: any;
   let propertyName: string;
+  let ruleSrc = null;
   if (expression instanceof AccessScope) {
     object = source.bindingContext;
     propertyName = expression.name;
   } else if (expression instanceof AccessMember) {
     object = getObject(originalExpression, expression.object, source);
     propertyName = expression.name;
+    if (expression.object)
+    {
+        //build the path to the property from the object root.
+        let exp = expression.object;
+        while(exp.object)
+        {
+            propertyName = exp.name +'.' + propertyName;
+            exp = exp.object;
+        }
+        ruleSrc= getObject(originalExpression, exp, source);
+    }
   } else if (expression instanceof AccessKeyed) {
     object = getObject(originalExpression, expression.object, source);
     propertyName = expression.key.evaluate(source);
@@ -46,5 +58,5 @@ export function getPropertyInfo(expression: Expression, source: any) {
     throw new Error(`Expression '${originalExpression}' is not compatible with the validate binding-behavior.`);
   }
 
-  return { object, propertyName };
+  return { object, propertyName, ruleSrc};
 }

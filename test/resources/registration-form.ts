@@ -11,8 +11,9 @@ import {
   <form novalidate autocomplete="off" if.bind="showForm">
     <input        id="firstName" type="text" value.bind="firstName & validate">
     <input        id="lastName"  type="text" value.bind="lastName & validate">
+    <input        id="subProp" type="text" value.bind="settings.subprop & validate">
     <input        id="email"     type="text" value.bind="email & validate">
-    <input        id="number1"   type="text" number-value.bind="number1 & validate"> 
+    <input        id="number1"   type="text" number-value.bind="number1 & validate">
     <number-input id="number2"               value.bind="number2 & validate"></number-input>
     <input        id="password"        type="text" value.bind="password & validate">
     <input        id="confirmPassword" type="text" value.bind="confirmPassword & validate">
@@ -23,6 +24,9 @@ export class RegistrationForm {
   firstName = '';
   lastName = '';
   email = '';
+  settings = {
+      subprop : ""
+  };
   number1 = 0;
   number2 = 0;
   password = '';
@@ -37,7 +41,7 @@ export class RegistrationForm {
 
 ValidationRules.customRule(
   'matchesProperty',
-  (value, obj, otherPropertyName) => 
+  (value, obj, otherPropertyName) =>
     value === null
     || value === undefined
     || value === ''
@@ -53,6 +57,8 @@ ValidationRules
   .ensure((f: RegistrationForm) => f.firstName).required()
   .ensure(f => f.lastName).required()
   .ensure('email').required().email()
+  .ensure("f.settings.subprop").minLength(2)
+  //.ensure(f => f.settings.subprop).required().minLength(2)
   .ensure(f => f.number1).satisfies(value => value > 0)
   .ensure(f => f.number2).satisfies(value => value > 0).withMessage('${displayName} gots to be greater than zero.')
   .ensure(f => f.password).required()

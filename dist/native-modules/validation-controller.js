@@ -2,6 +2,7 @@ import { Validator } from './validator';
 import { validateTrigger } from './validate-trigger';
 import { getPropertyInfo } from './property-info';
 import { ValidationError } from './validation-error';
+import { Rules } from './implementation/rules';
 /**
  * Orchestrates validation.
  * Manages a set of bindings, renderers and objects.
@@ -32,6 +33,7 @@ export var ValidationController = (function () {
         this.validateTrigger = validateTrigger.blur;
         // Promise that resolves when validation has completed.
         this.finishValidating = Promise.resolve();
+        this.isValid = false;
     }
     /**
      * Adds an object to the set of objects that should be validated when validate is called.
@@ -144,6 +146,9 @@ export var ValidationController = (function () {
             var object_2 = instruction.object, propertyName_2 = instruction.propertyName, rules_2 = instruction.rules;
             // if rules were not specified, check the object map.
             rules_2 = rules_2 || this.objects.get(object_2);
+            if (!rules_2) {
+                rules_2 = Rules.get(ruleSrc);
+            }
             // property specified?
             if (instruction.propertyName === undefined) {
                 // validate the specified object.
@@ -167,6 +172,15 @@ export var ValidationController = (function () {
                     var _f = getPropertyInfo(binding.sourceExpression, binding.source), object = _f.object, propertyName = _f.propertyName;
                     if (_this.objects.has(object)) {
                         continue;
+                    }
+                    if (propertyName.indexOf(".") !== -1) {
+                        var parentProp = "";
+                        var ittr = binding.sourceExpression.expression;
+                        while (ittr.object) {
+                            ittr = ittr.object;
+                            parentProp = ittr.name;
+                        }
+                        rules = Rules.get(binding._observer0._callable0._observer0.obj[parentProp]);
                     }
                     promises.push(_this.validator.validateProperty(object, propertyName, rules));
                 }
@@ -243,7 +257,7 @@ export var ValidationController = (function () {
                 this_1.errors.splice(this_1.errors.indexOf(oldError), 1);
             }
             else {
-                // there is a corresponding new error...        
+                // there is a corresponding new error...
                 var newError = newErrors.splice(newErrorIndex, 1)[0];
                 // get the elements that are associated with the new error.
                 var elements_1 = this_1.getAssociatedElements(newError);
@@ -281,9 +295,13 @@ export var ValidationController = (function () {
         if (!binding.isBound) {
             return;
         }
-        var _a = getPropertyInfo(binding.sourceExpression, binding.source), object = _a.object, propertyName = _a.propertyName;
+        var _a = getPropertyInfo(binding.sourceExpression, binding.source), object = _a.object, propertyName = _a.propertyName, ruleSrc = _a.ruleSrc;
         var registeredBinding = this.bindings.get(binding);
         var rules = registeredBinding ? registeredBinding.rules : undefined;
+        if (!rules && ruleSrc) {
+            //if we got ruleSrc back we need to get the rules for the subprop which are located in the  root of the model
+            rules = Rules.get(ruleSrc);
+        }
         this.validate({ object: object, propertyName: propertyName, rules: rules });
     };
     /**

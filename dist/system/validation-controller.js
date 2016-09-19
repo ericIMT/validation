@@ -1,7 +1,7 @@
-System.register(['./validator', './validate-trigger', './property-info', './validation-error'], function(exports_1, context_1) {
+System.register(['./validator', './validate-trigger', './property-info', './validation-error', './implementation/rules'], function(exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var validator_1, validate_trigger_1, property_info_1, validation_error_1;
+    var validator_1, validate_trigger_1, property_info_1, validation_error_1, rules_1;
     var ValidationController;
     return {
         setters:[
@@ -16,6 +16,9 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
             },
             function (validation_error_1_1) {
                 validation_error_1 = validation_error_1_1;
+            },
+            function (rules_1_1) {
+                rules_1 = rules_1_1;
             }],
         execute: function() {
             /**
@@ -48,6 +51,7 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                     this.validateTrigger = validate_trigger_1.validateTrigger.blur;
                     // Promise that resolves when validation has completed.
                     this.finishValidating = Promise.resolve();
+                    this.isValid = false;
                 }
                 /**
                  * Adds an object to the set of objects that should be validated when validate is called.
@@ -130,7 +134,7 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                  */
                 ValidationController.prototype.getInstructionPredicate = function (instruction) {
                     if (instruction) {
-                        var object_1 = instruction.object, propertyName_1 = instruction.propertyName, rules_1 = instruction.rules;
+                        var object_1 = instruction.object, propertyName_1 = instruction.propertyName, rules_2 = instruction.rules;
                         var predicate_1;
                         if (instruction.propertyName) {
                             predicate_1 = function (x) { return x.object === object_1 && x.propertyName === propertyName_1; };
@@ -139,8 +143,8 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                             predicate_1 = function (x) { return x.object === object_1; };
                         }
                         // todo: move to Validator interface:
-                        if (rules_1 && rules_1.indexOf) {
-                            return function (x) { return predicate_1(x) && rules_1.indexOf(x.rule) !== -1; };
+                        if (rules_2 && rules_2.indexOf) {
+                            return function (x) { return predicate_1(x) && rules_2.indexOf(x.rule) !== -1; };
                         }
                         return predicate_1;
                     }
@@ -157,17 +161,20 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                     // Get a function that will process the validation instruction.
                     var execute;
                     if (instruction) {
-                        var object_2 = instruction.object, propertyName_2 = instruction.propertyName, rules_2 = instruction.rules;
+                        var object_2 = instruction.object, propertyName_2 = instruction.propertyName, rules_3 = instruction.rules;
                         // if rules were not specified, check the object map.
-                        rules_2 = rules_2 || this.objects.get(object_2);
+                        rules_3 = rules_3 || this.objects.get(object_2);
+                        if (!rules_3) {
+                            rules_3 = rules_1.Rules.get(ruleSrc);
+                        }
                         // property specified?
                         if (instruction.propertyName === undefined) {
                             // validate the specified object.
-                            execute = function () { return _this.validator.validateObject(object_2, rules_2); };
+                            execute = function () { return _this.validator.validateObject(object_2, rules_3); };
                         }
                         else {
                             // validate the specified property.
-                            execute = function () { return _this.validator.validateProperty(object_2, propertyName_2, rules_2); };
+                            execute = function () { return _this.validator.validateProperty(object_2, propertyName_2, rules_3); };
                         }
                     }
                     else {
@@ -183,6 +190,15 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                                 var _f = property_info_1.getPropertyInfo(binding.sourceExpression, binding.source), object = _f.object, propertyName = _f.propertyName;
                                 if (_this.objects.has(object)) {
                                     continue;
+                                }
+                                if (propertyName.indexOf(".") !== -1) {
+                                    var parentProp = "";
+                                    var ittr = binding.sourceExpression.expression;
+                                    while (ittr.object) {
+                                        ittr = ittr.object;
+                                        parentProp = ittr.name;
+                                    }
+                                    rules = rules_1.Rules.get(binding._observer0._callable0._observer0.obj[parentProp]);
                                 }
                                 promises.push(_this.validator.validateProperty(object, propertyName, rules));
                             }
@@ -259,7 +275,7 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                             this_1.errors.splice(this_1.errors.indexOf(oldError), 1);
                         }
                         else {
-                            // there is a corresponding new error...        
+                            // there is a corresponding new error...
                             var newError = newErrors.splice(newErrorIndex, 1)[0];
                             // get the elements that are associated with the new error.
                             var elements_1 = this_1.getAssociatedElements(newError);
@@ -297,9 +313,13 @@ System.register(['./validator', './validate-trigger', './property-info', './vali
                     if (!binding.isBound) {
                         return;
                     }
-                    var _a = property_info_1.getPropertyInfo(binding.sourceExpression, binding.source), object = _a.object, propertyName = _a.propertyName;
+                    var _a = property_info_1.getPropertyInfo(binding.sourceExpression, binding.source), object = _a.object, propertyName = _a.propertyName, ruleSrc = _a.ruleSrc;
                     var registeredBinding = this.bindings.get(binding);
                     var rules = registeredBinding ? registeredBinding.rules : undefined;
+                    if (!rules && ruleSrc) {
+                        //if we got ruleSrc back we need to get the rules for the subprop which are located in the  root of the model
+                        rules = rules_1.Rules.get(ruleSrc);
+                    }
                     this.validate({ object: object, propertyName: propertyName, rules: rules });
                 };
                 /**

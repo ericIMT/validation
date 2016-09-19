@@ -48,7 +48,14 @@ export class StandardValidator extends Validator {
                 continue;
             }
             // validate.
-            const value = rule.property.name === null ? object : object[rule.property.name];
+            let value = rule.property.name === null ? object : object[rule.property.name];
+            if (rule.property.name && rule.property.name.indexOf('.') !== -1) {
+                //if the rule name has a '.', we have a sub property.
+                //object  is the object containing the field. get the last propertyy in the chain
+                //to get the field name. Use thi to get the correct value.
+                let parts = rule.property.name.split('.');
+                value = object[parts[parts.length - 1]];
+            }
             let promiseOrBoolean = rule.condition(value, object);
             if (!(promiseOrBoolean instanceof Promise)) {
                 promiseOrBoolean = Promise.resolve(promiseOrBoolean);

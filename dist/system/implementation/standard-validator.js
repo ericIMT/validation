@@ -74,6 +74,13 @@ System.register(['aurelia-templating', '../validator', '../validation-error', '.
                         }
                         // validate.
                         var value = rule.property.name === null ? object : object[rule.property.name];
+                        if (rule.property.name && rule.property.name.indexOf('.') !== -1) {
+                            //if the rule name has a '.', we have a sub property.
+                            //object  is the object containing the field. get the last propertyy in the chain
+                            //to get the field name. Use thi to get the correct value.
+                            var parts = rule.property.name.split('.');
+                            value = object[parts[parts.length - 1]];
+                        }
                         var promiseOrBoolean = rule.condition(value, object);
                         if (!(promiseOrBoolean instanceof Promise)) {
                             promiseOrBoolean = Promise.resolve(promiseOrBoolean);

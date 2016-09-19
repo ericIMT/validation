@@ -25,6 +25,7 @@ function getPropertyInfo(expression, source) {
     }
     var object;
     var propertyName;
+    var ruleSrc = null;
     if (expression instanceof aurelia_binding_1.AccessScope) {
         object = source.bindingContext;
         propertyName = expression.name;
@@ -32,6 +33,15 @@ function getPropertyInfo(expression, source) {
     else if (expression instanceof aurelia_binding_1.AccessMember) {
         object = getObject(originalExpression, expression.object, source);
         propertyName = expression.name;
+        if (expression.object) {
+            //build the path to the property from the object root.
+            var exp = expression.object;
+            while (exp.object) {
+                propertyName = exp.name + '.' + propertyName;
+                exp = exp.object;
+            }
+            ruleSrc = getObject(originalExpression, exp, source);
+        }
     }
     else if (expression instanceof aurelia_binding_1.AccessKeyed) {
         object = getObject(originalExpression, expression.object, source);
@@ -40,6 +50,6 @@ function getPropertyInfo(expression, source) {
     else {
         throw new Error("Expression '" + originalExpression + "' is not compatible with the validate binding-behavior.");
     }
-    return { object: object, propertyName: propertyName };
+    return { object: object, propertyName: propertyName, ruleSrc: ruleSrc };
 }
 exports.getPropertyInfo = getPropertyInfo;

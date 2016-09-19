@@ -4,7 +4,7 @@ import {validateTrigger} from './validate-trigger';
 import {getPropertyInfo} from './property-info';
 import {ValidationRenderer, RenderInstruction} from './validation-renderer';
 import {ValidationError} from './validation-error';
-
+import {Rules} from './implementation/rules';
 /**
  * Information related to an "& validate" decorated binding.
  */
@@ -75,6 +75,7 @@ export class ValidationController {
   // Promise that resolves when validation has completed.
   private finishValidating = Promise.resolve();
 
+  public isValid = false;
   constructor(private validator: Validator) {}
 
   /**
@@ -110,7 +111,7 @@ export class ValidationController {
   /**
    * Removes and unrenders a ValidationError.
    */
-  removeError(error: ValidationError) { 
+  removeError(error: ValidationError) {
     if (this.errors.indexOf(error) !== -1) {
       this.processErrorDelta('reset', [error], []);
     }
@@ -168,7 +169,7 @@ export class ValidationController {
   private getInstructionPredicate(instruction?: ValidateInstruction): (error: ValidationError) => boolean {
     if (instruction) {
       const { object, propertyName, rules } = instruction;
-      let predicate: (error: ValidationError) => boolean; 
+      let predicate: (error: ValidationError) => boolean;
       if (instruction.propertyName) {
         predicate = x => x.object === object && x.propertyName === propertyName;
       } else {
@@ -194,7 +195,11 @@ export class ValidationController {
     if (instruction) {
       let { object, propertyName, rules } = instruction;
       // if rules were not specified, check the object map.
-      rules = rules || this.objects.get(object);      
+      rules = rules || this.objects.get(object);
+      if (!rules)
+      {
+          rules = Rules.get(ruleSrc);
+      }
       // property specified?
       if (instruction.propertyName === undefined) {
         // validate the specified object.
@@ -215,7 +220,18 @@ export class ValidationController {
           if (this.objects.has(object)) {
             continue;
           }
-          promises.push(this.validator.validateProperty(object, propertyName, rules));        
+          if (propertyName.indexOf(".") !== -1)
+          {
+              let parentProp ="";
+              let ittr= binding.sourceExpression.expression;
+              while(ittr.object)
+              {
+                  ittr = ittr.object;
+                  parentProp = ittr.name;
+              }
+              rules = Rules.get(binding._observer0._callable0._observer0.obj[parentProp]);
+          }
+          promises.push(this.validator.validateProperty(object, propertyName, rules));
         }
         return Promise.all(promises).then(errorSets => errorSets.reduce((a, b) => a.concat(b), []));
       };
@@ -226,13 +242,13 @@ export class ValidationController {
     let result = this.finishValidating
       .then(execute)
       .then(newErrors => {
-        const predicate = this.getInstructionPredicate(instruction);        
+        const predicate = this.getInstructionPredicate(instruction);
         const oldErrors = this.errors.filter(predicate);
         this.processErrorDelta('validate', oldErrors, newErrors);
         if (result === this.finishValidating) {
           this.validating = false;
         }
-        return newErrors;   
+        return newErrors;
       })
       .catch(error => {
         // recover, to enable subsequent calls to validate()
@@ -241,7 +257,7 @@ export class ValidationController {
 
         return Promise.reject(error);
       });
-    
+
     this.finishValidating = result;
 
     return result;
@@ -251,10 +267,10 @@ export class ValidationController {
    * Resets any rendered errors (unrenders).
    * @param instruction Optional. Instructions on what to reset. If unspecified all rendered errors will be unrendered.
    */
-  reset(instruction?: ValidateInstruction) {    
-    const predicate = this.getInstructionPredicate(instruction);        
+  reset(instruction?: ValidateInstruction) {
+    const predicate = this.getInstructionPredicate(instruction);
     const oldErrors = this.errors.filter(predicate);
-    this.processErrorDelta('reset', oldErrors, []);    
+    this.processErrorDelta('reset', oldErrors, []);
   }
 
   /**
@@ -281,12 +297,11 @@ export class ValidationController {
 
     // create a shallow copy of newErrors so we can mutate it without causing side-effects.
     newErrors = newErrors.slice(0);
-
     // create unrender instructions from the old errors.
     for (let oldError of oldErrors) {
       // get the elements associated with the old error.
       const elements = <Element[]>this.elements.get(oldError);
-      
+
       // remove the old error from the element map.
       this.elements.delete(oldError);
 
@@ -299,13 +314,13 @@ export class ValidationController {
         // no corresponding new error... simple remove.
         this.errors.splice(this.errors.indexOf(oldError), 1);
       } else {
-        // there is a corresponding new error...        
+        // there is a corresponding new error...
         const newError = newErrors.splice(newErrorIndex, 1)[0];
-        
+
         // get the elements that are associated with the new error.
         const elements = this.getAssociatedElements(newError);
         this.elements.set(newError, elements);
-        
+
         // create a render instruction for the new error.
         instruction.render.push({ error: newError, elements });
 
@@ -336,9 +351,14 @@ export class ValidationController {
     if (!binding.isBound) {
       return;
     }
-    const { object, propertyName } = getPropertyInfo(<Expression>binding.sourceExpression, (<any>binding).source);
+    const { object, propertyName , ruleSrc} = getPropertyInfo(<Expression>binding.sourceExpression, (<any>binding).source);
     const registeredBinding = this.bindings.get(binding);
-    const rules = registeredBinding ? registeredBinding.rules : undefined; 
+    let rules = registeredBinding ? registeredBinding.rules : undefined;
+    if(!rules && ruleSrc)
+    {
+        //if we got ruleSrc back we need to get the rules for the subprop which are located in the  root of the model
+       rules = Rules.get(ruleSrc);
+    }
     this.validate({ object, propertyName, rules });
   }
 

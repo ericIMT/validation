@@ -41,6 +41,7 @@ export declare class ValidationController {
      */
     validateTrigger: number;
     private finishValidating;
+    isValid: boolean;
     constructor(validator: Validator);
     /**
      * Adds an object to the set of objects that should be validated when validate is called.

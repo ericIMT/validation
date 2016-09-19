@@ -2,6 +2,7 @@ import { Validator } from './validator';
 import { validateTrigger } from './validate-trigger';
 import { getPropertyInfo } from './property-info';
 import { ValidationError } from './validation-error';
+import { Rules } from './implementation/rules';
 /**
  * Orchestrates validation.
  * Manages a set of bindings, renderers and objects.
@@ -32,6 +33,7 @@ export class ValidationController {
         this.validateTrigger = validateTrigger.blur;
         // Promise that resolves when validation has completed.
         this.finishValidating = Promise.resolve();
+        this.isValid = false;
     }
     /**
      * Adds an object to the set of objects that should be validated when validate is called.
@@ -141,6 +143,9 @@ export class ValidationController {
             let { object, propertyName, rules } = instruction;
             // if rules were not specified, check the object map.
             rules = rules || this.objects.get(object);
+            if (!rules) {
+                rules = Rules.get(ruleSrc);
+            }
             // property specified?
             if (instruction.propertyName === undefined) {
                 // validate the specified object.
@@ -162,6 +167,15 @@ export class ValidationController {
                     const { object, propertyName } = getPropertyInfo(binding.sourceExpression, binding.source);
                     if (this.objects.has(object)) {
                         continue;
+                    }
+                    if (propertyName.indexOf(".") !== -1) {
+                        let parentProp = "";
+                        let ittr = binding.sourceExpression.expression;
+                        while (ittr.object) {
+                            ittr = ittr.object;
+                            parentProp = ittr.name;
+                        }
+                        rules = Rules.get(binding._observer0._callable0._observer0.obj[parentProp]);
                     }
                     promises.push(this.validator.validateProperty(object, propertyName, rules));
                 }
@@ -236,7 +250,7 @@ export class ValidationController {
                 this.errors.splice(this.errors.indexOf(oldError), 1);
             }
             else {
-                // there is a corresponding new error...        
+                // there is a corresponding new error...
                 const newError = newErrors.splice(newErrorIndex, 1)[0];
                 // get the elements that are associated with the new error.
                 const elements = this.getAssociatedElements(newError);
@@ -267,9 +281,13 @@ export class ValidationController {
         if (!binding.isBound) {
             return;
         }
-        const { object, propertyName } = getPropertyInfo(binding.sourceExpression, binding.source);
+        const { object, propertyName, ruleSrc } = getPropertyInfo(binding.sourceExpression, binding.source);
         const registeredBinding = this.bindings.get(binding);
-        const rules = registeredBinding ? registeredBinding.rules : undefined;
+        let rules = registeredBinding ? registeredBinding.rules : undefined;
+        if (!rules && ruleSrc) {
+            //if we got ruleSrc back we need to get the rules for the subprop which are located in the  root of the model
+            rules = Rules.get(ruleSrc);
+        }
         this.validate({ object, propertyName, rules });
     }
     /**
