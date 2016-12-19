@@ -11,8 +11,9 @@ import {
   <form novalidate autocomplete="off" if.bind="showForm">
     <input        id="firstName" type="text" value.bind="firstName & validate">
     <input        id="lastName"  type="text" value.bind="lastName & validate">
+    <input        id="subProperty" type="text" value.bind="settings.subProperty & validate">
     <input        id="email"     type="text" value.bind="email & validate">
-    <input        id="number1"   type="text" number-value.bind="number1 & validate"> 
+    <input        id="number1"   type="text" number-value.bind="number1 & validate">
     <number-input id="number2"               value.bind="number2 & validate"></number-input>
     <input        id="password"        type="text" value.bind="password & validate">
     <input        id="confirmPassword" type="text" value.bind="confirmPassword & validate">
@@ -23,6 +24,9 @@ export class RegistrationForm {
   public firstName = '';
   public lastName = '';
   public email = '';
+  public settings = {
+      'subProperty' :  ''
+  };
   public number1 = 0;
   public number2 = 0;
   public password = '';
@@ -52,6 +56,7 @@ ValidationRules.customRule(
 ValidationRules
   .ensure((f: RegistrationForm) => f.firstName).required()
   .ensure(f => f.lastName).required()
+  .ensure(f => f.settings.subProperty).required()
   .ensure('email').required().email()
   .ensure(f => f.number1).satisfies(value => value > 0)
   .ensure(f => f.number2).satisfies(value => value > 0).withMessage('${displayName} gots to be greater than zero.')

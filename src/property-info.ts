@@ -30,12 +30,22 @@ export function getPropertyInfo(expression: Expression, source: any): { object: 
 
   let object: null | undefined | Object;
   let propertyName: string;
+  let ruleSrc = null;
   if (expression instanceof AccessScope) {
     object = source.bindingContext;
     propertyName = expression.name;
   } else if (expression instanceof AccessMember) {
     object = getObject(originalExpression, expression.object, source);
     propertyName = expression.name;
+    if (expression.object) {
+        // build the path to the property from the object root.
+        let exp: any = expression.object;
+        while (exp.object) {
+            propertyName = exp.name + '.' + propertyName;
+            exp = exp.object;
+        }
+        ruleSrc = <any>getObject(originalExpression, exp, source);
+    }
   } else if (expression instanceof AccessKeyed) {
     object = getObject(originalExpression, expression.object, source);
     propertyName = expression.key.evaluate(source);

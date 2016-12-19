@@ -28,7 +28,7 @@ export class StandardValidator extends Validator {
    * Validates the specified property.
    * @param object The object to validate.
    * @param propertyName The name of the property to validate.
-   * @param rules Optional. If unspecified, the rules will be looked up using the metadata 
+   * @param rules Optional. If unspecified, the rules will be looked up using the metadata
    * for the object created by ValidationRules....on(class/object)
    */
   public validateProperty(object: any, propertyName: string, rules?: any): Promise<ValidateResult[]> {
@@ -38,7 +38,7 @@ export class StandardValidator extends Validator {
   /**
    * Validates all rules for specified object and it's properties.
    * @param object The object to validate.
-   * @param rules Optional. If unspecified, the rules will be looked up using the metadata 
+   * @param rules Optional. If unspecified, the rules will be looked up using the metadata
    * for the object created by ValidationRules....on(class/object)
    */
   public validateObject(object: any, rules?: any): Promise<ValidateResult[]> {
@@ -108,7 +108,17 @@ export class StandardValidator extends Validator {
       }
 
       // validate.
-      const value = rule.property.name === null ? object : object[rule.property.name];
+      let value = rule.property.name === null ? object : object[rule.property.name];
+      console.log("standard-validator.ts 109 Property ", rule.property.name);
+      if (rule.property.name && rule.property.name.indexOf('.') !== -1) {
+        // if the rule name has a '.', we have a sub property.
+        // "Object" is the parent containing the field.
+        // The field is the last part of the propert path
+        // e.g. finalProp in object.sub1.sub2.finalProp
+        let parts = rule.property.name.split('.');
+        value = object[ parts[ parts.length - 1 ]];
+      }
+      console.log("standard-validator.ts 118 Property ", rule.property.name);
       let promiseOrBoolean = rule.condition(value, object);
       if (!(promiseOrBoolean instanceof Promise)) {
         promiseOrBoolean = Promise.resolve(promiseOrBoolean);

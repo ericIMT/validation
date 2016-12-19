@@ -4,7 +4,7 @@ import { DOM } from 'aurelia-pal';
 export function configure(aurelia: Aurelia) {
   aurelia.use
     .standardConfiguration()
-    // .developmentLogging()
+     .developmentLogging()
     .plugin('dist/test/src/aurelia-validation')
     .feature('./dist/test/test/resources');
 }

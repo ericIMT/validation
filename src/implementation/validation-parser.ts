@@ -64,10 +64,19 @@ export class ValidationParser {
       return { name: <string>property, displayName: null };
     }
     const accessor = this.getAccessorExpression(property.toString());
-    if (accessor instanceof AccessScope
-      || accessor instanceof AccessMember && accessor.object instanceof AccessScope) {
-      return {
-        name: accessor.name,
+    const isSubProp = accessor instanceof AccessMember && accessor.object instanceof AccessScope;
+    if (accessor instanceof AccessScope || isSubProp) {
+       let propName = (<any>accessor).name;
+       if (isSubProp) {
+           // iterate up the chain until we are in the 1st sub-object of the root object.
+           let ao = (<any>accessor).object;
+           while (ao) {
+               propName = ao.name + '.' + propName;
+               ao = ao.object;
+           }
+       }
+       return {
+        name:  propName,
         displayName: null
       };
     }
@@ -88,8 +97,8 @@ export class ValidationParser {
   }
 
   private getAccessorExpression(fn: string): Expression {
-    const classic = /^function\s*\([$_\w\d]+\)\s*\{\s*(?:"use strict";)?\s*return\s+[$_\w\d]+\.([$_\w\d]+)\s*;?\s*\}$/;
-    const arrow = /^\(?[$_\w\d]+\)?\s*=>\s*[$_\w\d]+\.([$_\w\d]+)$/;
+    const classic = /^function\s*\([$_\w\d]+\)\s*\{\s*(?:"use strict";)?\s*.*return\s+[$_\w\d]+\.([$_\w\d]+(\.[$_\w\d]+)*)\s*;?\s*\}$/;
+    const arrow = /^\(?[$_\w\d]+\)?\s*=>\s*(?:\{?.*return\s+)?[$_\w\d]+\.([$_\w\d]+(\.[$_\w\d]+)*);?\s*\}?$/;
     const match = classic.exec(fn) || arrow.exec(fn);
     if (match === null) {
       throw new Error(`Unable to parse accessor function:\n${fn}`);

@@ -6,6 +6,7 @@ import { ValidationRenderer, RenderInstruction } from './validation-renderer';
 import { ValidateResult } from './validate-result';
 import { ValidateInstruction } from './validate-instruction';
 import { ControllerValidateResult } from './controller-validate-result';
+import { Rules } from './implementation/rules';
 
 /**
  * Orchestrates validation.
@@ -160,7 +161,7 @@ export class ValidationController {
 
   /**
    * Validates and renders results.
-   * @param instruction Optional. Instructions on what to validate. If undefined, all 
+   * @param instruction Optional. Instructions on what to validate. If undefined, all
    * objects and bindings will be validated.
    */
   public validate(instruction?: ValidateInstruction): Promise<ControllerValidateResult> {
@@ -170,6 +171,24 @@ export class ValidationController {
       let { object, propertyName, rules } = instruction;
       // if rules were not specified, check the object map.
       rules = rules || this.objects.get(object);
+      if (!rules) {
+            for (let [binding, ] of Array.from(this.bindings)) {
+                  const propertyInfo = getPropertyInfo(<Expression>binding.sourceExpression, (<any>binding).source);
+                  if (!propertyInfo || propertyInfo.propertyName !== propertyName ||
+                       this.objects.has(propertyInfo.object)) {
+                    continue;
+                  }
+                  if (propertyInfo.propertyName.indexOf('.') !== -1) {
+                      let parentProp = '';
+                      let ittr: any = (<any>binding).sourceExpression.expression;
+                      while (ittr.object) {
+                          ittr = ittr.object;
+                          parentProp = ittr.name;
+                      }
+                      rules = Rules.get((<any>binding)._observer0._callable0._observer0.obj[parentProp]);
+                  }
+            }
+      }
       // property specified?
       if (instruction.propertyName === undefined) {
         // validate the specified object.
@@ -185,10 +204,24 @@ export class ValidationController {
         for (let [object, rules] of Array.from(this.objects)) {
           promises.push(this.validator.validateObject(object, rules));
         }
-        for (let [binding, { rules }] of Array.from(this.bindings)) {
+        for (let [binding,  {rulesObj} ] of <any>Array.from(this.bindings)) {
           const propertyInfo = getPropertyInfo(<Expression>binding.sourceExpression, (<any>binding).source);
           if (!propertyInfo || this.objects.has(propertyInfo.object)) {
             continue;
+          }
+          let propName = propertyInfo.propertyName;
+          let rules: any = null;
+          if (propertyInfo.propertyName.indexOf('.') !== -1) {
+              let parentProp = '';
+              let ittr: any = (<any>binding).sourceExpression.expression;
+              while (ittr.object) {
+                  ittr = ittr.object;
+                  parentProp = ittr.name;
+              }
+              propName = propertyInfo.propertyName.substr(propertyInfo.propertyName.lastIndexOf('.') + 1);
+              rules = Rules.get((<any>binding)._observer0._callable0._observer0.obj[parentProp]);
+          } else {
+              rules = rulesObj;
           }
           promises.push(this.validator.validateProperty(propertyInfo.object, propertyInfo.propertyName, rules));
         }
@@ -287,7 +320,7 @@ export class ValidationController {
           this.errors.splice(this.errors.indexOf(oldResult), 1);
         }
       } else {
-        // there is a corresponding new result...        
+        // there is a corresponding new result...
         const newResult = newResults.splice(newResultIndex, 1)[0];
 
         // get the elements that are associated with the new result.

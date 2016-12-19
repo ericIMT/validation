@@ -4,6 +4,10 @@ import { RegistrationForm } from './resources/registration-form';
 import { validateTrigger } from '../src/aurelia-validation';
 import { configure, blur, change } from './shared';
 
+let c = console;
+let l = c.log;
+let d = c.dir;
+
 describe('end to end', () => {
   it('basic scenarios', (done: () => void) => {
     const component: ComponentTester = StageComponent
@@ -14,6 +18,7 @@ describe('end to end', () => {
 
     let firstName: HTMLInputElement;
     let lastName: HTMLInputElement;
+    let subProperty: HTMLInputElement;
     let number1: HTMLInputElement;
     let number2: HTMLInputElement;
     let password: HTMLInputElement;
@@ -30,6 +35,7 @@ describe('end to end', () => {
         viewModel.controller.addRenderer(renderer);
         firstName = <HTMLInputElement>component.element.querySelector('#firstName');
         lastName = <HTMLInputElement>component.element.querySelector('#lastName');
+        subProperty = <HTMLInputElement>component.element.querySelector('#subProperty');
         number1 = <HTMLInputElement>component.element.querySelector('#number1');
         number2 = <HTMLInputElement>component.element.querySelector('#number2');
         password = <HTMLInputElement>component.element.querySelector('#password');
@@ -41,13 +47,14 @@ describe('end to end', () => {
       .then(() => blur(firstName))
       // confirm there's an error.
       .then(() => expect(viewModel.controller.errors.length).toBe(1))
-      // make a model change to the firstName field. 
+      // make a model change to the firstName field.
       // this should reset the errors for the firstName field.
       .then(() => viewModel.firstName = 'test')
       // confirm the errors were reset.
       .then(() => expect(viewModel.controller.errors.length).toBe(0))
       // blur the lastName field- this should trigger validation.
       .then(() => blur(lastName))
+
       // confirm there's an error.
       .then(() => {
         expect(viewModel.controller.errors.length).toBe(1);
@@ -55,6 +62,27 @@ describe('end to end', () => {
         const renderInstruction = calls.argsFor(calls.count() - 1)[0];
         expect(renderInstruction.render[0].elements[0]).toBe(lastName);
       })
+
+      // blur the subProperty- this should trigger validation.
+      .then(()=>{
+        l('***************** subProperty Start:');
+        //l(viewModel)
+      })
+      .then(() => {
+            l(viewModel);
+            l(viewModel.controller.bindings.values());
+            l(viewModel.controller.elements.values());
+      })
+      .then(() => blur(subProperty))
+      // confirm there's an error.
+      .then(() => expect(viewModel.controller.errors.length).toBe(2))
+      // set to a valid value, should reset error
+      .then(() => change(subProperty , 'test'))
+      .then(() => expect(viewModel.controller.errors.length).toBe(1))
+      .then(()=>{
+        l('***************** subProperty End.');
+      })
+
       // blur the number1 field- this should trigger validation.
       .then(() => blur(number1))
       // confirm there's an error.
@@ -73,12 +101,12 @@ describe('end to end', () => {
         const renderInstruction = calls.argsFor(calls.count() - 1)[0];
         expect(renderInstruction.render[0].elements[0]).toBe(number2);
       })
-      // make a model change to the number1 field. 
+      // make a model change to the number1 field.
       // this should reset the errors for the number1 field.
       .then(() => viewModel.number1 = 1)
       // confirm the error was reset.
       .then(() => expect(viewModel.controller.errors.length).toBe(2))
-      // make a model change to the number2 field. 
+      // make a model change to the number2 field.
       // this should reset the errors for the number2 field.
       .then(() => viewModel.number2 = 2)
       // confirm the error was reset.
@@ -166,7 +194,7 @@ describe('end to end', () => {
       .then(() => blur(firstName))
       // confirm there's an error.
       .then(() => expect(viewModel.controller.errors.length).toBe(1))
-      // make a model change to the firstName field. 
+      // make a model change to the firstName field.
       // this should reset the errors for the firstName field.
       .then(() => viewModel.firstName = 'test')
       // confirm the errors were reset.

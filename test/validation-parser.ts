@@ -1,4 +1,4 @@
-import { Expression, AccessScope } from 'aurelia-binding';
+import { Expression, AccessScope, AccessMember } from 'aurelia-binding';
 import { Container } from 'aurelia-dependency-injection';
 import { BindingLanguage } from 'aurelia-templating';
 import { TemplatingBindingLanguage } from 'aurelia-templating-binding';
@@ -29,6 +29,7 @@ describe('Validator', () => {
     expect(parse('a =>a.b')).toEqual(new AccessScope('b', 0));
     expect(parse('a=> a.b')).toEqual(new AccessScope('b', 0));
     expect(parse('a => a.b')).toEqual(new AccessScope('b', 0));
+    // expect(parse('a => a.b.c')).toEqual(new AccessMember(new AccessScope('b', 0), 'c'));
     expect(parse('a => a.bcde')).toEqual(new AccessScope('bcde', 0));
     expect(parse('_ => _.b')).toEqual(new AccessScope('b', 0));
     expect(parse('$ => $.b')).toEqual(new AccessScope('b', 0));
